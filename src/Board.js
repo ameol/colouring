@@ -17,15 +17,19 @@ const ContinuityError = ({ data }) => {
 class Board extends Component {
   constructor (props) {
     super(props)
+    const { defaultBlacks, defaultWhites } = this.props.defaultBlacks
+
     this.state = {
-      blackBlocks: [],
-      whiteBlocks: [],
+      blackBlocks: defaultBlacks || [],
+      whiteBlocks: defaultWhites || [],
       continuityError: null,
       notEqualError: null,
     }
   }
   static DefaultProps = {
-    size: 4,
+    size: 6,
+    isUnique: false,
+    DefaultData: {},
   }
   componentDidMount() {
     document.addEventListener('contextmenu', this._handleContextMenu)
@@ -35,6 +39,16 @@ class Board extends Component {
   componentWillUnmount() {
     document.removeEventListener('contextmenu', this._handleContextMenu)
     document.removeEventListener('click', this._handleClick)
+  }
+
+  static getDerivedStateFromProps (nextProps, prevState) {
+    if (nextProps.defaultBlacks.length && nextProps.defaultWhites.length && !prevState.blackBlocks.length && !prevState.whiteBlocks.length) {
+      return {
+        blackBlocks: [...nextProps.defaultBlacks],
+        whiteBlocks: [...nextProps.defaultWhites],
+      }
+    }
+    return prevState
   }
   hasData() {
     const { blackBlocks, whiteBlocks } = this.state
@@ -58,6 +72,7 @@ class Board extends Component {
   }
 
   _setNewBlock = (event, type) => {
+    const { defaultBlacks, defaultWhites } = this.props
     const $board = document.getElementById('board_wrap')
     const { clientX, clientY } = event
     const x = Math.floor((clientX - $board.offsetLeft) / 40)
@@ -69,10 +84,11 @@ class Board extends Component {
     }
     const currentBlocks = this.state[type]
     const val = `${x},${y}`
-    // 限制同按键点击同区域
-    if(~currentBlocks.indexOf(val)) {
+    // 限制同按键点击同区域, 以及默认的节点不能点击
+    if(currentBlocks.includes(val) || defaultBlacks.includes(val) || defaultWhites.includes(val)) {
       return false
     }
+    
     const otherType = type === 'blackBlocks' ? 'whiteBlocks' : 'blackBlocks'
     const otherBlocks = [...this.state[otherType]]
     const index = otherBlocks.indexOf(val)
@@ -100,17 +116,28 @@ class Board extends Component {
   
   _isWin() {
     const { blackBlocks, whiteBlocks } = this.state
-    const { size } = this.props
+    const { size, isUnique } = this.props
     const rightCount = (size * size) / 2
     let flag = true
-
+    const uniqueXList = []
+    const uniqueYList = []
     for (let i = 0; i < size; i++){
       const fixedXBlackBlocks = blackBlocks.filter((item) => item.startsWith(`${i},`))
       const fixedXWhiteBlocks = whiteBlocks.filter((item) => item.startsWith(`${i},`))
-
+      if (isUnique) {
+        uniqueXList.push({
+          blacks: this._getSortedList(fixedXBlackBlocks, 'x'),
+          whites: this._getSortedList(fixedXWhiteBlocks, 'x'),
+        })
+      }
       const fixedYBlackBlocks = blackBlocks.filter((item) => item.endsWith(`,${i}`))
       const fixedYWhiteBlocks = whiteBlocks.filter((item) => item.endsWith(`,${i}`))
-      console.log(i)
+      if (isUnique) {
+        uniqueYList.push({
+          blacks: this._getSortedList(fixedYBlackBlocks, 'y'),
+          whites: this._getSortedList(fixedYWhiteBlocks, 'y'),
+        })
+      }
       if(this._hasContinuity(fixedXBlackBlocks, 'x') || this._hasContinuity(fixedXWhiteBlocks, 'x') ||
          this._hasContinuity(fixedYBlackBlocks, 'y') || this._hasContinuity(fixedYWhiteBlocks, 'y')) {
         return false
@@ -118,9 +145,12 @@ class Board extends Component {
         return false
       }
     }
-
-
     if (rightCount !== blackBlocks.length || rightCount !== whiteBlocks.length || !flag) {
+      return false
+    } else if (isUnique && (!this._isAllUnique(uniqueXList) || !this._isAllUnique(uniqueYList))) {
+      setTimeout(() => {
+        alert('棋盘上不能有两行或者两列的黑白格子排列相同')
+      }, 100)
       return false
     }
     return true
@@ -130,7 +160,6 @@ class Board extends Component {
     const { size } = this.props
     const bLen = blackBlocks.length
     const wLen = whiteBlocks.length
-    
     if (bLen !== wLen && bLen + wLen === size) {
       this.setState({
         notEqualError: whiteBlocks
@@ -166,9 +195,8 @@ class Board extends Component {
       return Number(item.split(',')[side])
     })
     const tempList = isContinuity(arr, 3)[0] //超过三个连续的集合(只第一个提示)
-    console.log(arr, type,tempList && tempList.length)
     if (tempList && tempList.length) {
-      const a = Number(blocks[0].split(',')[type === 'x' ? 0 : 1])
+      const a = Number(blocks[0].split(',')[Number(!side)]) //取当前行、列的固定x或者y的值
       const starts = side ? [a, tempList[0]] : [tempList[0], a]
       const ends = side ? [a, tempList[tempList.length - 1]] : [tempList[tempList.length - 1], a]
       const errorList = [...starts, ...ends]
@@ -180,11 +208,29 @@ class Board extends Component {
       this.setState({
         continuityError: null
       })
-      console.log(1111)
       return false
     }
   }
   
+  _isAllUnique (list) {
+    const temp = `${list[0].blacks.join(',')},${list[0].whites.join(',')}`
+    let flag = true
+    list.forEach((item, i) => {
+      const result = `${item.blacks.join(',')},${item.whites.join(',')}`
+      if (i > 1 && temp === result) {
+        flag = false
+      }
+    })
+    return flag
+  }
+
+  _getSortedList (blocks, type) {
+    const side = type === 'x' ? 1 : 0
+    const mapData = blocks.map((item) => Number(item.split(',')[side]))
+    mapData.sort((prev, next) => prev > next)
+    return mapData
+  }
+
   render() {
     const { blackBlocks, whiteBlocks, continuityError, notEqualError } = this.state
     const { size } = this.props
