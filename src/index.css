@@ -13,6 +13,10 @@ html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pr
   align-items: center;
   justify-content: center;
 }
+.select_wrap {
+  margin: 10px 0;
+}
+
 .app button {
   width: 90px;
   height: 36px;
@@ -23,6 +27,9 @@ html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pr
   margin: 30px auto;
 }
 
+.board_wrap {
+  position: relative;
+}
 .board {
   border-collapse: collapse;
   border-spacing: 0;
@@ -31,14 +38,24 @@ html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pr
   background-color: #ccc;
 }
 .board tr td {
+  box-sizing: border-box;
   width: 40px;
   height: 40px;
   border-top: 1px solid #999;
   border-right: 1px solid #999;
+  color: red;
+  text-align: center;
+  vertical-align: middle;
 }
 .black_block {
   background-color: #000;
 }
 .white_block {
   background-color: #fff;
+}
+
+.error_three {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid red;
 }
