@@ -14,7 +14,7 @@ export function isContinuity (arr, count) {
 
 
 function getRandom (num) {
-  return Math.floor(Math.random() * num)
+  return Math.floor(Math.random() * num) || 1
 }
 
 function checkList (x, y, blocks, size) {
